@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "631659631227",
+    "firebase_url": "https://footbalaware.firebaseio.com",
+    "project_id": "footbalaware",
+    "storage_bucket": "footbalaware.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:631659631227:android:f6c2c593f5adff4c",
+        "android_client_info": {
+          "package_name": "com.computo.juego"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "631659631227-rdqgcdkso4mb3jjr1gfos9f2t4j1ss6f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.computo.juego",
+            "certificate_hash": "67d33dffc9a3711dfc155a0f9b4a14964807b797"
+          }
+        },
+        {
+          "client_id": "631659631227-fcmnvgrcua6ogn9fu0e5qpj1licddm8j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCj97oZZ7GjgzBAzoklZiNiYpQN-iuljMM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "631659631227-fcmnvgrcua6ogn9fu0e5qpj1licddm8j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
