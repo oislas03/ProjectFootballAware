@@ -25,6 +25,14 @@ public class Goal : MonoBehaviour
             Invoke("AddScore", 3.0f);
             Destroy(gameObject, 3.0f);
         }
+        else if (collision.gameObject.tag.Equals("Field Limit"))
+        {
+
+            
+            GameObject.FindGameObjectWithTag("Ball").GetComponent<Swipe>().SendDataToPlayer();
+            Destroy(GameObject.FindGameObjectWithTag("Ball"));
+           
+        }
     }
 
     private void AddScore()

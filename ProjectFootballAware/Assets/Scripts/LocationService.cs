@@ -5,18 +5,18 @@ using UnityEngine.UI;
 
 public class LocationService : MonoBehaviour
 {
-    public Text qwer;
+    public Text locationMessage;
     IEnumerator Start()
     {
-        while (!UnityEditor.EditorApplication.isRemoteConnected)
-        {
-            Debug.Log("Unity Remote no está conectado");
-            yield break;
-        }
+        //while (!UnityEditor.EditorApplication.isRemoteConnected)
+        //{
+        //    Debug.Log("Unity Remote no está conectado");
+        //    yield break;
+        //}
 
         if (!Input.location.isEnabledByUser)
         {
-            Debug.Log("Servicio no activado");
+            //Debug.Log("Servicio no activado");
             yield break;
         }
 
@@ -31,13 +31,13 @@ public class LocationService : MonoBehaviour
 
         if (maxWait < 1)
         {
-            Debug.Log("Se acabó el tiempo");
+            //Debug.Log("Se acabó el tiempo");
             yield break;
         }
 
         if (Input.location.status == LocationServiceStatus.Failed)
         {
-            Debug.Log("No se puede determinar la ubicación");
+            //Debug.Log("No se puede determinar la ubicación");
             yield break;
         }
         else
@@ -50,15 +50,15 @@ public class LocationService : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        qwer.text = "Latitud: " + Input.location.lastData.latitude.ToString()
+        locationMessage.text = "Latitud: " + Input.location.lastData.latitude.ToString()
                 + "Longitud: " + Input.location.lastData.longitude.ToString()
                 + "Altitud: " + Input.location.lastData.altitude.ToString()
                 + "Exactitud horizontal: " + Input.location.lastData.horizontalAccuracy.ToString()
                 + "Tiempo: " + Input.location.lastData.timestamp.ToString();
-        Debug.Log("Latitud: " + Input.location.lastData.latitude
-                + "Longitud: " + Input.location.lastData.longitude
-                + "Altitud: " + Input.location.lastData.altitude
-                + "Exactitud horizontal: " + Input.location.lastData.horizontalAccuracy
-                + "Tiempo: " + Input.location.lastData.timestamp);
+        //Debug.Log("Latitud: " + Input.location.lastData.latitude
+        //        + "Longitud: " + Input.location.lastData.longitude
+        //        + "Altitud: " + Input.location.lastData.altitude
+        //        + "Exactitud horizontal: " + Input.location.lastData.horizontalAccuracy
+        //        + "Tiempo: " + Input.location.lastData.timestamp);
     }
 }

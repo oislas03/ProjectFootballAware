@@ -8,6 +8,9 @@ public class FootballUser
     public string invited;
     public string playing;
     public string whoInvited;
+    public string latitud;
+    public string longitud;
+    public string altitud;
 
     public FootballUser()
     {
@@ -19,6 +22,11 @@ public class FootballUser
         this.invited = "no";
         this.playing = "no";
         this.whoInvited = "none";
-        
+        this.latitud = "0";
+        this.longitud = "0";
+        this.altitud = "0";
+
+
     }
 }
+
