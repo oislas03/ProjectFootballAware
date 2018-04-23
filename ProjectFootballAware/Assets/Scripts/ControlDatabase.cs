@@ -11,14 +11,16 @@ public class ControlDatabase : MonoBehaviour
 {
     FirebaseDatabase mDatabase;
     public string myUsername;
+    public FootballUser myUser;
     public GameObject prefabButton;
-    public RectTransform ParentPanel;
     public bool waitingAnswer;
     public GameObject imageWaiting;
     public static ControlDatabase cb;
     public Match myMatch;
     public GameObject ball;
     public string partnerName;
+    private float currentTime;
+    private float time;
 
     public void Awake()
     {
@@ -39,15 +41,18 @@ public class ControlDatabase : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+
         FirebaseApp.DefaultInstance.SetEditorDatabaseUrl("https://footbalaware.firebaseio.com/");
 
         // Get the root reference location of the database.
         mDatabase = FirebaseDatabase.DefaultInstance;
-
-        myUsername = "";
-        connnectToLobby();
+        
         waitingAnswer = false;
 
+        GameObject.Find("username").GetComponent<Text>().text = myUsername;
+    
+
+        time = 2;
         Input.location.Start();
 
     }
@@ -58,51 +63,74 @@ public class ControlDatabase : MonoBehaviour
         string key = GameObject.Find("InputField").GetComponent<InputField>().text;
 
         //Si el username no esta vacio permite conectarse
-        if (myUsername.Equals(""))
+        if (!key.Equals(""))
         {
+            if (myUsername.Equals(""))
+            {
+                myUsername = key;
+                GameObject.Find("username").GetComponent<Text>().text = myUsername;
+                myUser = new FootballUser(key);
+                string json = JsonUtility.ToJson(myUser);
 
-            myUsername = key;
-            GameObject.Find("username").GetComponent<Text>().text = myUsername;
-            FootballUser user = new FootballUser(key);
-            string json = JsonUtility.ToJson(user);
+                //actualizar datos
+                //mDatabase.RootReference.Child("users").Child(userId).Child("username").SetValueAsync("pepe");
 
-            //actualizar datos
-            //mDatabase.RootReference.Child("users").Child(userId).Child("username").SetValueAsync("pepe");
+                //Generar Key unica
+                //string key = mDatabase.RootReference.Child("users").Push().Key;
 
-            //Generar Key unica
-            //string key = mDatabase.RootReference.Child("users").Push().Key;
+                //agregar datos
+                mDatabase.RootReference.Child("users").Child(key).SetRawJsonValueAsync(json);
 
-            //agregar datos
-            mDatabase.RootReference.Child("users").Child(key).SetRawJsonValueAsync(json);
+                connnectToLobby();
 
-            //Una vez que nos conectamos debemos abrir un canal de comunicacion para recibir llamadas de los demas
-            //leemos las llamadas que recibamos de otros
-            FirebaseDatabase.DefaultInstance
-          .GetReference("users").Child(key).ValueChanged += MyHandleValueChanged;
-            FirebaseDatabase.DefaultInstance
-    .GetReference("users").Child(key)
-    .GetValueAsync().ContinueWith(task =>
-    {
-        if (task.IsFaulted)
+
+                //Una vez que nos conectamos debemos abrir un canal de comunicacion para recibir llamadas de los demas
+                //leemos las llamadas que recibamos de otros
+                FirebaseDatabase.DefaultInstance
+              .GetReference("users").Child(key).ValueChanged += MyHandleValueChanged;
+                FirebaseDatabase.DefaultInstance
+        .GetReference("users").Child(key)
+        .GetValueAsync().ContinueWith(task =>
         {
-            Debug.Log("Can not connect with " + key);
-        }
-        else if (task.IsCompleted)
-        {
-            DataSnapshot snapshot = task.Result;
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary = (Dictionary<string, object>)snapshot.Value;
-            string latitud = Input.location.lastData.latitude.ToString();
-            string longitud = Input.location.lastData.longitude.ToString();
-            string altitud = Input.location.lastData.altitude.ToString();
-            mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("latitud").SetValueAsync(latitud);
-            mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("longitud").SetValueAsync(longitud);
-            mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("altitud").SetValueAsync(altitud);
+            if (task.IsFaulted)
+            {
+                Debug.Log("Can not connect with " + key);
+            }
+            else if (task.IsCompleted)
+            {
+                DataSnapshot snapshot = task.Result;
+                Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                dictionary = (Dictionary<string, object>)snapshot.Value;
+                myUser.latitud = Input.location.lastData.latitude.ToString();
+                myUser.longitud = Input.location.lastData.longitude.ToString();
+                myUser.altitud = Input.location.lastData.altitude.ToString();
+                mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("latitud").SetValueAsync(myUser.latitud);
+                mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("longitud").SetValueAsync(myUser.longitud);
+                mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("altitud").SetValueAsync(myUser.altitud);
 
-            waitingAnswer = true;
+                waitingAnswer = true;
+            }
+        });
+            }
         }
-    });
+    }
+
+    public void DeleteUser() {
+
+        mDatabase.RootReference.Child("users").Child(myUsername).SetValueAsync(null);
+        FirebaseDatabase.DefaultInstance
+            .GetReference("users").Child(myUsername).ValueChanged -= MyHandleValueChanged;
+             myUsername = "";
+
+        disconnectFromLobby();
+
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("dynamicUser");
+        foreach (GameObject obj in objects)
+        {
+            Destroy(obj);
         }
+        GameObject.Find("username").GetComponent<Text>().text = "no username";
+        GameObject.Find("InputField").GetComponent<InputField>().text ="";
     }
 
     public void askUserToPlay(string id)
@@ -134,9 +162,15 @@ public class ControlDatabase : MonoBehaviour
 
               //si esa persona no ha sido invitada aun
               if (dictionary["invited"].ToString().Equals("no") || dictionary["playing"].ToString().Equals("no"))
-              {
+              {  
+
+                  //Escribes que la persona esta jugando contigo
                   mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("whoInvited").SetValueAsync(myUsername);
                   mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("invited").SetValueAsync("yes");
+
+
+                 
+
                   Debug.Log("You have invited " + dictionary["username"].ToString());
 
                   //Nos desconectamos del lobi y establecemos los particpantes de la partida
@@ -145,14 +179,14 @@ public class ControlDatabase : MonoBehaviour
                   string player2 = dictionary["username"].ToString();
                   partnerName = dictionary["username"].ToString();
 
-
                   //Generar Key unica
                   string key = mDatabase.RootReference.Child("matches").Push().Key;
 
                   //Dejamos la referencia de la partida actual en cada usuario
                   mDatabase.RootReference.Child("users").Child(dictionary["username"].ToString()).Child("playing").SetValueAsync(key);
-                  //mDatabase.RootReference.Child("users").Child(dictionary[myUsername].ToString()).Child("playing").SetValueAsync(key);
+                  mDatabase.RootReference.Child("users").Child(myUsername).Child("playing").SetValueAsync(key);
 
+                  //mDatabase.RootReference.Child("users").Child(dictionary[myUsername].ToString()).Child("playing").SetValueAsync(key);
 
                   //Crea y envia la partida
                   myMatch = new Match(player1, player2, key);
@@ -179,10 +213,11 @@ public class ControlDatabase : MonoBehaviour
 
     }
 
+    public void left() {
 
-
-    public void leave()
-    {
+        FirebaseDatabase.DefaultInstance
+   .GetReference("matches").Child(myMatch.id).ValueChanged -= MyHandleValueChangedMatch;
+        myMatch = null;
 
         //Limpiamos el registro de nuestro propio usuario
         mDatabase.RootReference.Child("users").Child(myUsername).Child("invited").SetValueAsync("no");
@@ -191,12 +226,46 @@ public class ControlDatabase : MonoBehaviour
 
         //Cambiamos a la escena principal del titulo y nos conectamos devuelta al loby para ser visible para otros usuarios
         SceneManager.LoadScene("Title Screen");
+        ControlDatabase.cb.connnectToLobby();
 
         //Referenciamos el metodo de crear al nuevo boton creado
         UnityEngine.Events.UnityAction action1 = () => { this.writeNewUser(); };
-        GameObject.FindGameObjectWithTag("btnConnect").GetComponent<Button>().onClick.AddListener(action1);
+        // GameObject.FindGameObjectWithTag("btnConnect").GetComponent<Button>().onClick.AddListener(action1);
 
-        connnectToLobby();
+
+    }
+
+    public void leave()
+    {
+        if (myUsername.Equals(myMatch.player1))
+        {
+            mDatabase.RootReference.Child("users").Child(myMatch.player2).Child("playing").SetValueAsync("leave");
+
+        }
+        else {
+
+            mDatabase.RootReference.Child("users").Child(myMatch.player1).Child("playing").SetValueAsync("leave");
+
+     }
+        FirebaseDatabase.DefaultInstance
+   .GetReference("matches").Child(myMatch.id).ValueChanged -= MyHandleValueChangedMatch;
+        myMatch = null;
+
+        //Limpiamos el registro de nuestro propio usuario
+        mDatabase.RootReference.Child("users").Child(myUsername).Child("invited").SetValueAsync("no");
+        mDatabase.RootReference.Child("users").Child(myUsername).Child("whoInvited").SetValueAsync("none");
+        mDatabase.RootReference.Child("users").Child(myUsername).Child("playing").SetValueAsync("no");
+
+        //Cambiamos a la escena principal del titulo y nos conectamos devuelta al loby para ser visible para otros usuarios
+        SceneManager.LoadScene("Title Screen");
+        ControlDatabase.cb.connnectToLobby();
+
+        //Referenciamos el metodo de crear al nuevo boton creado
+        UnityEngine.Events.UnityAction action1 = () => { this.writeNewUser(); };
+        // GameObject.FindGameObjectWithTag("btnConnect").GetComponent<Button>().onClick.AddListener(action1);
+      
+
+
 
 
     }
@@ -258,8 +327,12 @@ public class ControlDatabase : MonoBehaviour
         Dictionary<string, object> dictionary = new Dictionary<string, object>();
         dictionary = (Dictionary<string, object>)args.Snapshot.Value;
 
-        //si alguien nos invito a jugar lo veremos aqui
-        if (dictionary["invited"].ToString().Equals("yes") && !dictionary["playing"].ToString().Equals("no"))
+        //si estabamos jugando y nuestro compañero abandono la partida
+        if (dictionary["playing"].ToString().Equals("leave")) {
+            left();
+        }
+            //si alguien nos invito a jugar lo veremos aqui
+            else if (dictionary["invited"].ToString().Equals("yes") && !dictionary["playing"].ToString().Equals("no"))
         {
 
             disconnectFromLobby();
@@ -321,19 +394,12 @@ public class ControlDatabase : MonoBehaviour
             latitud = dictionary2["latitud"].ToString();
             longitud = dictionary2["longitud"].ToString();
 
-            if (float.Parse(altitud) > (Input.location.lastData.altitude + 3) &&
-                float.Parse(longitud) > (Input.location.lastData.longitude + 5) &&
-                float.Parse(latitud) > (Input.location.lastData.latitude + 5))
-            {
+            bool longitudB = Input.location.lastData.longitude + .002 > float.Parse(longitud) && (Input.location.lastData.longitude - .002) < float.Parse(longitud) ? true : false;
+            bool latitudB = Input.location.lastData.latitude + .002 > float.Parse(latitud) && (Input.location.lastData.latitude - .002) < float.Parse(latitud) ? true : false;
+            bool altitudB = Input.location.lastData.altitude + 100 > float.Parse(altitud) && (Input.location.lastData.altitude - 100) < float.Parse(altitud) ? true : false;
 
-            }
-            else if (float.Parse(altitud) < (Input.location.lastData.altitude - 3) &&
-                      float.Parse(longitud) < (Input.location.lastData.longitude - 5) &&
-                      float.Parse(latitud) < (Input.location.lastData.latitude - 5))
-            {
 
-            }
-            else
+            if ((latitudB & longitudB & altitudB)&&(!item.Key.Equals(myUsername))&&(dictionary2["playing"]).Equals("no"))
             {
 
                 playerLists += item.Key + "\n";
@@ -347,7 +413,7 @@ public class ControlDatabase : MonoBehaviour
                 //posicionamos el objecto en la parte adecuada
                 goButton.GetComponent<RectTransform>().position = new Vector2(25f, startbuttonpos);
                 startbuttonpos -= 80f;
-                goButton.transform.SetParent(ParentPanel, false);
+                goButton.transform.SetParent(GameObject.Find("Canvas").GetComponent<RectTransform>(), false);
 
                 //Cambiamos el nombre del boton al nombre real
                 goButton.GetComponentInChildren<Text>().text = item.Key.ToString();
@@ -367,15 +433,42 @@ public class ControlDatabase : MonoBehaviour
         }
     }
 
-    public void ButtonClicked(string buttonNo)
-    {
-        Debug.Log("Button clicked = " + buttonNo);
-    }
+
 
     // Update is called once per frame
     void Update()
     {
+        /*
+        
+        currentTime += Time.deltaTime;
+        if (currentTime >= time)
+        {
+            GameObject.Find("latitude").GetComponent<Text>().text = Input.location.lastData.latitude + "";
+            GameObject.Find("longitude").GetComponent<Text>().text = Input.location.lastData.longitude + "";
 
+
+            if (float.Parse(myUser.longitud) != Input.location.lastData.longitude)
+            {
+                mDatabase.RootReference.Child("users").Child(myUsername).Child("longitud").SetValueAsync(Input.location.lastData.longitude + "");
+                myUser.longitud = Input.location.lastData.longitude + "";
+
+            }
+
+            if (float.Parse(myUser.latitud) != Input.location.lastData.latitude)
+            {
+                mDatabase.RootReference.Child("users").Child(myUsername).Child("latitud").SetValueAsync(Input.location.lastData.latitude + "");
+                myUser.latitud = Input.location.lastData.latitude + "";
+            }
+
+            if (float.Parse(myUser.altitud) != Input.location.lastData.altitude)
+            {
+                mDatabase.RootReference.Child("users").Child(myUsername).Child("altitud").SetValueAsync(Input.location.lastData.altitude + "");
+                myUser.altitud = Input.location.lastData.altitude + "";
+            }
+
+            currentTime = 0;
+        }
+        */
     }
 
     public void sendMatch(Match match)
@@ -388,9 +481,51 @@ public class ControlDatabase : MonoBehaviour
         //leemos las llamadas que recibamos de otros
         FirebaseDatabase.DefaultInstance
       .GetReference("matches").Child(match.id).ValueChanged += MyHandleValueChangedMatch;
+
+        mDatabase.RootReference.Child("scores").Child(myMatch.id).Child("player1Score").SetValueAsync("0");
+        mDatabase.RootReference.Child("scores").Child(myMatch.id).Child("player2Score").SetValueAsync("0");
+
+        FirebaseDatabase.DefaultInstance
+    .GetReference("scores").Child(match.id).ValueChanged += MyHandleValueChangedScore;
     }
 
-    void MyHandleValueChangedMatch(object sender, ValueChangedEventArgs args)
+
+    void MyHandleValueChangedScore(object sender, ValueChangedEventArgs args)
+    {
+        if (args.DatabaseError != null)
+        {
+            Debug.LogError(args.DatabaseError.Message);
+            return;
+        }
+
+     
+
+
+            //Transformamos nuestros datos en un diccionario de datos
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
+        dictionary = (Dictionary<string, object>)args.Snapshot.Value;
+
+         if (int.Parse(dictionary["player1Score"].ToString()) != myMatch.player1Score)
+            {
+                myMatch.player1Score++;
+                GameControl.instance.MyGoal();
+
+            }
+
+         if (int.Parse(dictionary["player2Score"].ToString()) != myMatch.player2Score)
+            {
+                myMatch.player2Score++;
+                GameControl.instance.MyGoal();
+
+            }
+
+        
+
+
+
+    }
+
+        void MyHandleValueChangedMatch(object sender, ValueChangedEventArgs args)
     {
         if (args.DatabaseError != null)
         {
@@ -402,8 +537,14 @@ public class ControlDatabase : MonoBehaviour
         Dictionary<string, object> dictionary = new Dictionary<string, object>();
         dictionary = (Dictionary<string, object>)args.Snapshot.Value;
 
+        if (dictionary["player1Score"].ToString().Equals("5") || dictionary["player2Score"].Equals("5"))
+        {
+            SceneManager.LoadScene("Title Screen");
+        }
 
-       if (dictionary["isball"].ToString().Equals(myUsername))  {
+
+        if (dictionary["isball"].ToString().Equals(myUsername))
+        {
             myMatch.isball = myUsername;
             float vectorx = float.Parse(dictionary["vectorX"].ToString());
             float vectory = float.Parse(dictionary["vectorY"].ToString());
@@ -421,6 +562,22 @@ public class ControlDatabase : MonoBehaviour
                     GameControl.instance.InstantiateBall(vectorx, vectory, directionX, directionY, force);
                 }
             }
+        }
+     
+    }
+
+    public void UpdateScore( int player)
+    {
+        if (1 == player) {
+            myMatch.player1Score++;
+            mDatabase.RootReference.Child("scores").Child(myMatch.id).Child("player1Score").SetValueAsync(myMatch.player1Score);
+            
+        }else if(2==player)
+        {
+            myMatch.player2Score++;
+
+            mDatabase.RootReference.Child("scores").Child(myMatch.id).Child("player2Score").SetValueAsync(myMatch.player2Score);
+
         }
     }
 
@@ -441,8 +598,11 @@ public class ControlDatabase : MonoBehaviour
         mDatabase.RootReference.Child("matches").Child(myMatch.id).SetRawJsonValueAsync(json);
     }
 
+
+
     public void OnGUI()
     {
 
     }
+
 }

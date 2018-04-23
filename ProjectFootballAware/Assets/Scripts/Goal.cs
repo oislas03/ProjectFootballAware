@@ -22,21 +22,13 @@ public class Goal : MonoBehaviour
         if (collision.gameObject.tag.Equals("Goal Net"))
         {
             GameControl.instance.Goal();
-            Invoke("AddScore", 3.0f);
-            Destroy(gameObject, 3.0f);
+            Destroy(gameObject);
+
         }
         else if (collision.gameObject.tag.Equals("Field Limit"))
         {
-
-            
             GameObject.FindGameObjectWithTag("Ball").GetComponent<Swipe>().SendDataToPlayer();
             Destroy(GameObject.FindGameObjectWithTag("Ball"));
-           
         }
-    }
-
-    private void AddScore()
-    {
-        GameControl.instance.UpdateScores();
     }
 }

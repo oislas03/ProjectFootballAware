@@ -99,6 +99,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\ButtonControl.cs" />
     <Compile Include="Assets\Scripts\ControlDatabase.cs" />
     <Compile Include="Assets\Scripts\FootballUser.cs" />
     <Compile Include="Assets\Scripts\GameControl.cs" />

@@ -11,7 +11,8 @@ public class Swipe : MonoBehaviour
     float touchTimeFinish;
     float timeInterval;
     Rigidbody2D rb;
-    bool throwAllowed = true;
+    bool throwAllowed = false;
+    Vector2 wtf;
 
     [Range(0.5f, 1f)]
     public float throwForce = 0.3f;
@@ -35,16 +36,16 @@ public class Swipe : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-           if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
             touchTimeStart = Time.time;
             startPos = Input.GetTouch(0).position;
             Vector2 touchPos = Camera.main.ScreenToWorldPoint(startPos);
 
-            //if (GetComponent<Collider2D>() == Physics2D.OverlapPoint(touchPos))
-            //{
-            //    throwAllowed = true;
-            //}
+            if (GetComponent<Collider2D>() == Physics2D.OverlapPoint(touchPos))
+            {
+                throwAllowed = true;
+            }
         }
         if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Ended && throwAllowed)
         {
@@ -52,11 +53,11 @@ public class Swipe : MonoBehaviour
             timeInterval = touchTimeFinish - touchTimeStart;
             endPos = Input.GetTouch(0).position;
             direction = startPos - endPos;
-
+            wtf = -direction / timeInterval * throwForce;
             rb.isKinematic = false;
-            rb.AddForce(-direction / timeInterval * throwForce);
+            rb.AddForce(wtf);
 
-            //throwAllowed = false;
+            throwAllowed = false;
         }
         Debug.Log("Posición inicial: " + startPos);
         Debug.Log("Posición final: " + endPos);
@@ -67,11 +68,14 @@ public class Swipe : MonoBehaviour
     {
         rb = GameObject.FindGameObjectWithTag("Ball").GetComponent<Rigidbody2D>();
         rb.isKinematic = false;
-        rb.velocity = new Vector2(-directionX, -directionY);
+        rb.velocity = new Vector2(-directionX, -force);
     }
 
     public void SendDataToPlayer()
-    {   
-        ControlDatabase.cb.UpdateMatch(rb.position.x, rb.position.y, direction.x, direction.y, (timeInterval*throwForce));
+    {
+        ControlDatabase.cb.UpdateMatch( rb.position.x, rb.position.y,
+                                        rb.GetPointVelocity(new Vector2(rb.position.x, 4f)).x,
+                                        rb.GetPointVelocity(new Vector2(rb.position.x, 4f)).y,
+                                        rb.velocity.magnitude);
     }
 }

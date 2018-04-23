@@ -19,6 +19,7 @@ public class GameControl : MonoBehaviour
     public Text winnerText;
     public Text loserText;
     public Text goalText;
+    public string myPlayer;
 
     // Use this for initialization
     void Start()
@@ -39,10 +40,11 @@ public class GameControl : MonoBehaviour
         player1Name.text = ControlDatabase.cb.myMatch.player1;
         player2Name.text = ControlDatabase.cb.myMatch.player2;
 
-        string myPlayer = GameObject.FindGameObjectWithTag("ControlDataBase").GetComponent<ControlDatabase>().myUsername;
+        myPlayer = GameObject.FindGameObjectWithTag("ControlDataBase").GetComponent<ControlDatabase>().myUsername;
 
         if (myPlayer.Equals(player1Name.text.ToString()))
-        {            Instantiate(ball, new Vector2(), Quaternion.identity);
+        {
+            Instantiate(ball, new Vector2(), Quaternion.identity);
 
         }
 
@@ -55,7 +57,7 @@ public class GameControl : MonoBehaviour
 
     public void Leave()
     {
-        GameObject.FindGameObjectWithTag("ControlDataBase").GetComponent<ControlDatabase>().leave();
+       ControlDatabase.cb.leave();
     }
 
     // Update is called once per frame
@@ -63,29 +65,63 @@ public class GameControl : MonoBehaviour
     {
         if ((Int32.Parse(player1score.text) == maxScore))
         {
-            Winner();
+            if (myPlayer.Equals(ControlDatabase.cb.myMatch.player1.ToString()))
+             {
+                Winner();
+            }
+            else
+            {
+                Loser();
+            }
         }
         else if ((Int32.Parse(player2score.text) == maxScore))
         {
-            Loser();
+            if (myPlayer.Equals(ControlDatabase.cb.myMatch.player2.ToString()))
+            {
+                Winner();
+            }
+            else
+            {
+                Loser();
+            }
+
         }
+
     }
 
     public void Goal()
     {
         goalText.gameObject.SetActive(true);
+
+        if (myPlayer.Equals(player1Name.text.ToString()))
+        {
+            ControlDatabase.cb.UpdateScore(2);
+            player2score.text = ControlDatabase.cb.myMatch.player2Score + "";
+        }
+        else if (myPlayer.Equals(player2Name.text.ToString()))
+        {
+            ControlDatabase.cb.UpdateScore(1);
+            player1score.text = ControlDatabase.cb.myMatch.player1Score + "";
+
+        }
+        Invoke("RestartGameWithBall", 3.0f);
     }
 
-    public void UpdateScores()
+
+    public void MyGoal()
     {
-        int p1score = Int32.Parse(player1score.text);
-        int p2score = Int32.Parse(player2score.text);
-        p1score++;
-        p2score++;
-        player1score.text = p1score.ToString();
-        player2score.text = p2score.ToString();
-        goalText.gameObject.SetActive(false);
-        Instantiate(ball, new Vector2(), Quaternion.identity);
+
+        goalText.gameObject.SetActive(true);
+        goalText.text = "GOAL!";
+
+            player1score.text = ControlDatabase.cb.myMatch.player1Score + "";
+      
+            player2score.text = ControlDatabase.cb.myMatch.player2Score + "";
+
+        
+        Invoke("RestartGameWithoutBall", 3.0f);
+
+
     }
 
     private void Winner()
@@ -100,15 +136,26 @@ public class GameControl : MonoBehaviour
         Invoke("RestartGame", 3.0f);
     }
 
-    private void RestartGame()
+    public void RestartGame() {
+        ControlDatabase.cb.leave();
+
+    }
+
+    private void RestartGameWithBall()
     {
-        SceneManager.LoadScene("Football Field");
+        goalText.gameObject.SetActive(false);
+        Instantiate(ball, new Vector2(), Quaternion.identity);
+    }
+
+    private void RestartGameWithoutBall()
+    {
+        goalText.gameObject.SetActive(false);
     }
 
     public void InstantiateBall(float vectorx, float vectory, float directionX, float directionY, float force)
     {
         Instantiate(ball, new Vector2(-vectorx, 4f), Quaternion.identity);
-        ball.GetComponent<Swipe>().ApplyForceToRigidbody(vectorx, vectory, force);
+        ball.GetComponent<Swipe>().ApplyForceToRigidbody(directionX, directionY, force);
     }
 }
 
@@ -127,7 +174,9 @@ public class Match
     public float force;
     public float directionX;
     public float directionY;
-    
+
+
+
 
     public Match(string player1, string player2, string id)
     {
